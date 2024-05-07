@@ -1,0 +1,19 @@
+[[targets]]
+name = "Bedroom Tapo Camera"
+host = "192.168.30.44"
+port = "554"
+stream = "/stream1"
+protocol = "rtsp"
+user = "brun0teixeira"
+password = "qwerty654321"
+recording_path = "/mnt/external/camera/bedroom-tapo/"
+
+[[targets]]
+name = "Bedroom Tapo Camera"
+host = "192.168.30.44"
+port = "554"
+stream = "/stream1"
+protocol = "rtsp"
+user = "brun0teixeira"
+password = "1qazZAQ!"
+recording_path = "/mnt/external/camera/bedroom-tapo/"

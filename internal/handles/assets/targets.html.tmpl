@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Targets</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="row">
+	<div class="col-md-12">
+
+	  <h1>Targets</h1>
+
+	  <table class="table">
+	    <tbody><tr>
+		<th width="100%">target</th>
+		<th width="72%">recording path</th>
+	      </tr>
+	      {{ range $target := .targets }}
+	      <tr>
+		<td>
+		  <p>{{ $target.Name }} - {{ $target.Host }}:{{ $target.Port }} at <b>{{ $target.Stream }}</b></p>
+		</td>
+		<td>
+		  <span class="label label-success">{{ $target.RecordingPath }}</span>
+		</td>
+	      </tr>
+	      {{ end }}
+	  </table>
+	</div>
+
+  </body>
+</html>
