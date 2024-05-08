@@ -3,6 +3,7 @@ package handles
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -38,6 +39,10 @@ func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// receives POST with info to start recording that POST
+// contains a duration object with the duration of the recording
+// if not present assume its 2h
+// after that we execute action.startFFMPEGRecording() function that records the current camera
 func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if r.Method != "POST" {
@@ -64,24 +69,21 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 		record.Duration = "2h"
 	}
 
-	duration, err := time.ParseDuration(record.Duration)
+	recordingDuration, err := time.ParseDuration(record.Duration)
 	if err != nil {
 		e := "[ERROR] While parsing duration: " + err.Error()
 		http.Error(w, e, http.StatusBadRequest)
 		log.Println(e)
 		return
 	}
-	log.Println(duration)
-	// FIXME: this is blocking the other operations
-	action.StartFFMPEGRecording()
 
-	// TODO: receives POST with info to start recording that POST
-	// contains a duration object with the duration of the recording
-	// if not present assume its 2h
-
-	// after that we execute action.startFFMPEGRecording() function and this needs to be assync so I need to check that because I want to start multiple recordings
-
-	return
+	// convert hour to seconds since ffmpeg uses seconds as time duration
+	recordingDurationS := fmt.Sprintf("%.f", recordingDuration.Seconds())
+	if err := action.StartFFMPEGRecording(recordingDurationS); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Println(err)
+		return
+	}
 }
 
 //go:embed assets/*
