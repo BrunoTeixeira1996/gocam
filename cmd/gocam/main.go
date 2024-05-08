@@ -35,3 +35,11 @@ func main() {
 		log.Fatal(err)
 	}
 }
+
+/*
+TODO:
+   - create dump flag to dump the recording
+   - create way of stoping record without breaking the .mp4
+   - create a way to list current recording
+   - clean code
+*/
