@@ -39,6 +39,9 @@ func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Map to store channels for each recording
+var recordingChannels = make(map[string]chan struct{})
+
 // receives POST with info to start recording that POST
 // contains a duration object with the duration of the recording
 // if not present assume its 2h
@@ -77,13 +80,35 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	camera1Channel := make(chan struct{})
+	recordingChannels["camera1"] = camera1Channel
+
 	// convert hour to seconds since ffmpeg uses seconds as time duration
 	recordingDurationS := fmt.Sprintf("%.f", recordingDuration.Seconds())
-	if err := action.StartFFMPEGRecording(recordingDurationS); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		log.Println(err)
-		return
+	// if err = action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel); err != nil {
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	log.Println(err)
+	// 	return
+	// }
+	// FIXMEE: I want to grab the error here
+	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel)
+}
+
+func cancelRecording(cameraID string) {
+	if ch, ok := recordingChannels[cameraID]; ok {
+		log.Println("CancelRecording function, channels: ", recordingChannels)
+		close(ch)
+		delete(recordingChannels, cameraID)
+		log.Printf("Cancellation signal sent for camera %s\n", cameraID)
+	} else {
+		log.Printf("No active recording found for camera %s\n", cameraID)
 	}
+}
+
+func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
+	_ = r.Body
+	cancelRecording("camera1")
+	fmt.Fprintf(w, "Recording for camera 1 cancelled")
 }
 
 //go:embed assets/*
@@ -106,6 +131,8 @@ func Init(targets []config.Target, listenPort string) error {
 	mux.HandleFunc("/", ui.indexHandler)
 	mux.HandleFunc("/listcameras/", ui.listHandler)
 	mux.HandleFunc("/record/", ui.recordHandler)
+	// Example endpoint to cancel recording for camera 1
+	mux.HandleFunc("/cancel/", ui.cancelHandler)
 
 	log.Printf("Listening at :%s\n", listenPort)
 
