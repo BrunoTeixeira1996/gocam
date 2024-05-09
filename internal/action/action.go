@@ -12,7 +12,7 @@ import (
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
 func StartFFMPEGRecording(recordingDuration string) error {
 	currentTime := time.Now()
-	formattedTime := currentTime.Format("2006-01-02-15:04:05")
+	formattedTime := currentTime.Format("2006-01-02-15-04-05")
 	outputFile := "output" + formattedTime + ".mp4"
 
 	log.Printf("Starting record duration: %s\n", recordingDuration)
