@@ -15,9 +15,9 @@ import (
 func StartFFMPEGRecording(rD time.Duration, recordingDuration string, cancel chan struct{}, dumpLocation string, logLocation string, recordID string) error {
 	currentTime := time.Now()
 	formattedTime := currentTime.Format("2006-01-02-15-04-05")
-	outputFile := dumpLocation + "/output" + formattedTime + "-" + recordID + ".mp4"
+	outputFile := dumpLocation + "output" + formattedTime + "-" + recordID + ".mp4"
 
-	log.Printf("[INFO]Starting record duration %s for %s file with %s ID\n", recordingDuration, outputFile, recordID)
+	log.Printf("[INFO] Starting record duration %s for %s file with %s ID\n", recordingDuration, outputFile, recordID)
 
 	cmd := exec.Command("ffmpeg", "-i", "rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1", "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recordingDuration, outputFile)
 
@@ -55,8 +55,21 @@ func StartFFMPEGRecording(rD time.Duration, recordingDuration string, cancel cha
 	if err := utils.SaveFFMPEGOutput(logLocation, recordID, output.Bytes()); err != nil {
 		return err
 	}
-	// TODO: finish this log sentence
-	log.Printf("[INFO] Finished record for %s ID and created log file in ...\n", recordID)
+
+	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recordID, logLocation)
 
 	return nil
+}
+
+// Map to store channels for each recording
+var RecordingChannels = make(map[string]chan struct{})
+
+func CancelRecording(recordID string) error {
+	log.Printf("[INFO] Cancellation signal sent for camera %s\n", recordID)
+	if ch, ok := RecordingChannels[recordID]; ok {
+		close(ch)
+		delete(RecordingChannels, recordID)
+		return nil
+	}
+	return fmt.Errorf("[ERROR] No active recording found for camera %s\n", recordID)
 }

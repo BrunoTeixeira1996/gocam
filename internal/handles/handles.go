@@ -42,10 +42,7 @@ func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Map to store channels for each recording
-var recordingChannels = make(map[string]chan struct{})
-
-// receives POST with info to start recording that POST
+// Receives POST with info to start recording that POST
 // contains a duration object with the duration of the recording
 // if not present assume its 2h
 // after that we execute action.startFFMPEGRecording() function that records the current camera
@@ -85,7 +82,7 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 
 	recordID := utils.GenerateRandomString(10)
 	cameraChannel := make(chan struct{})
-	recordingChannels[recordID] = cameraChannel
+	action.RecordingChannels[recordID] = cameraChannel
 
 	// convert hour to seconds since ffmpeg uses seconds as time duration
 	recordingDurationS := fmt.Sprintf("%.f", recordingDuration.Seconds())
@@ -98,17 +95,8 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, cameraChannel, ui.DumpLocation, ui.LogLocation, recordID)
 }
 
-func cancelRecording(recordID string) {
-	if ch, ok := recordingChannels[recordID]; ok {
-		log.Println("CancelRecording function, channels: ", recordingChannels)
-		close(ch)
-		delete(recordingChannels, recordID)
-		log.Printf("Cancellation signal sent for camera %s\n", recordID)
-	} else {
-		log.Printf("No active recording found for camera %s\n", recordID)
-	}
-}
-
+// Receives POST with an ID that contains the recording identifier
+// after that we execute action.CancelRecording(ID) function that stops a given recording
 func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if r.Method != "POST" {
@@ -136,10 +124,12 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, e, http.StatusBadRequest)
 		log.Println(e)
 	}
-	// FIXMEE: This should return an error
-	cancelRecording(data.ID)
-	e := "[INFO] Canceled recording for " + data.ID + "\n"
-	log.Println(e)
+
+	// Cancels specific recording
+	if err := action.CancelRecording(data.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusAccepted)
+		log.Println(err)
+	}
 }
 
 //go:embed assets/*
@@ -164,7 +154,6 @@ func Init(targets []config.Target, listenPort string, dumpRecording string, logR
 	mux.HandleFunc("/", ui.indexHandler)
 	mux.HandleFunc("/listcameras/", ui.listHandler)
 	mux.HandleFunc("/record/", ui.recordHandler)
-	// Example endpoint to cancel recording for camera 1
 	mux.HandleFunc("/cancel/", ui.cancelHandler)
 
 	log.Printf("Listen at port %s - Dump recording at %s - Log recording at %s\n", listenPort, dumpRecording, logRecording)

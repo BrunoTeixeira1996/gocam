@@ -37,7 +37,9 @@ func main() {
 
 /*
 TODO:
-   - check the FIXMEE
    - create a way to list current recordings
+   - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
+     - When killing a process I think its good to still have the ffmpeg output
+   - check the FIXMEE
    - clean code
 */
