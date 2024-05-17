@@ -10,12 +10,13 @@ import (
 )
 
 func run() error {
-	var configFlag = flag.String("f", "", "use this to provide the config file full path")
-	var listenPortFlag = flag.String("l", "", "use this to provide the listening port")
-	var dumpPathFlag = flag.String("d", "", "use this to provide the path to dump the .mp4 file")
+	var configFlag = flag.String("file", "", "use this to provide the config file full path")
+	var listenPortFlag = flag.String("listen", "", "use this to provide the listening port")
+	var dumpPathFlag = flag.String("dump", "", "use this to provide the path to dump the .mp4 file")
+	var logPathFlag = flag.String("log", "", "use this to provide the path to the log folder")
 	flag.Parse()
 
-	if *configFlag == "" || *listenPortFlag == "" || *dumpPathFlag == "" {
+	if *configFlag == "" || *listenPortFlag == "" || *dumpPathFlag == "" || *logPathFlag == "" {
 		return fmt.Errorf("[ERROR] Please provide valid flags")
 	}
 
@@ -24,7 +25,7 @@ func run() error {
 		return err
 	}
 
-	if err := handles.Init(cfg.Targets, *listenPortFlag, *dumpPathFlag); err != nil {
+	if err := handles.Init(cfg.Targets, *listenPortFlag, *dumpPathFlag, *logPathFlag); err != nil {
 		return err
 	}
 

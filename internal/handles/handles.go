@@ -12,6 +12,7 @@ import (
 
 	"github.com/BrunoTeixeira1996/gocam/internal/action"
 	"github.com/BrunoTeixeira1996/gocam/internal/config"
+	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
 type Record struct {
@@ -22,6 +23,7 @@ type UI struct {
 	tmpl         *template.Template
 	Targets      []config.Target
 	DumpLocation string
+	LogLocation  string
 }
 
 func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -81,8 +83,9 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	camera1Channel := make(chan struct{})
-	recordingChannels["camera1"] = camera1Channel
+	recordID := utils.GenerateRandomString(10)
+	cameraChannel := make(chan struct{})
+	recordingChannels[recordID] = cameraChannel
 
 	// convert hour to seconds since ffmpeg uses seconds as time duration
 	recordingDurationS := fmt.Sprintf("%.f", recordingDuration.Seconds())
@@ -92,30 +95,57 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 	// FIXMEE: I want to grab the error here
-	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel, ui.DumpLocation)
+	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, cameraChannel, ui.DumpLocation, ui.LogLocation, recordID)
 }
 
-func cancelRecording(cameraID string) {
-	if ch, ok := recordingChannels[cameraID]; ok {
+func cancelRecording(recordID string) {
+	if ch, ok := recordingChannels[recordID]; ok {
 		log.Println("CancelRecording function, channels: ", recordingChannels)
 		close(ch)
-		delete(recordingChannels, cameraID)
-		log.Printf("Cancellation signal sent for camera %s\n", cameraID)
+		delete(recordingChannels, recordID)
+		log.Printf("Cancellation signal sent for camera %s\n", recordID)
 	} else {
-		log.Printf("No active recording found for camera %s\n", cameraID)
+		log.Printf("No active recording found for camera %s\n", recordID)
 	}
 }
 
 func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
-	_ = r.Body
-	cancelRecording("camera1")
-	fmt.Fprintf(w, "Recording for camera 1 cancelled")
+	defer r.Body.Close()
+	if r.Method != "POST" {
+		e := "[ERROR] HTTP Method not allowed"
+		http.Error(w, e, http.StatusBadRequest)
+		log.Println(e)
+		return
+	}
+
+	responseBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		e := "[ERROR] While reading response body: " + err.Error()
+		http.Error(w, e, http.StatusBadRequest)
+		log.Println(e)
+		return
+	}
+
+	// Unmarshal JSON data
+	data := struct {
+		ID string
+	}{}
+
+	if err := json.Unmarshal(responseBody, &data); err != nil {
+		e := "[INFO] No JSON object provided in POST"
+		http.Error(w, e, http.StatusBadRequest)
+		log.Println(e)
+	}
+	// FIXMEE: This should return an error
+	cancelRecording(data.ID)
+	e := "[INFO] Canceled recording for " + data.ID + "\n"
+	log.Println(e)
 }
 
 //go:embed assets/*
 var assetsDir embed.FS
 
-func Init(targets []config.Target, listenPort string, dumpPath string) error {
+func Init(targets []config.Target, listenPort string, dumpPath string, logPath string) error {
 	var err error
 
 	tmpl, err := template.ParseFS(assetsDir, "assets/*.tmpl")
@@ -126,7 +156,8 @@ func Init(targets []config.Target, listenPort string, dumpPath string) error {
 	ui := &UI{
 		tmpl:         tmpl,
 		Targets:      targets,
-		DumpLocation: dumpPath,
+		DumpLocation: dumpPath, // FIXME: Maybe this should be in a different struct
+		LogLocation:  logPath,  // FIXME: Maybe this should be in a different struct
 	}
 
 	mux := http.NewServeMux()
