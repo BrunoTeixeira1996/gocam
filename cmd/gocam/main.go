@@ -37,13 +37,7 @@ func main() {
 
 /*
 TODO:
-   - create way of stoping record without breaking the .mp4
-     - its working but now i need
-       - clean useless prints
-       - add ID and return that ID on the record response
-       - add that ID to the map of channels so I can list and delete specific goroutines
-       - cancel handle is a POST that gets an object like {"recordID":123} and that ID is the ID belonging to the goroutine 123
-       - check the FIXMEE
+   - check the FIXMEE
    - create a way to list current recordings
    - clean code
 */
