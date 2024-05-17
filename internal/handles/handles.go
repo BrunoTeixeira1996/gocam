@@ -19,8 +19,9 @@ type Record struct {
 }
 
 type UI struct {
-	tmpl    *template.Template
-	Targets []config.Target
+	tmpl         *template.Template
+	Targets      []config.Target
+	DumpLocation string
 }
 
 func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -91,7 +92,7 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 	// FIXMEE: I want to grab the error here
-	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel)
+	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel, ui.DumpLocation)
 }
 
 func cancelRecording(cameraID string) {
@@ -114,7 +115,7 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 //go:embed assets/*
 var assetsDir embed.FS
 
-func Init(targets []config.Target, listenPort string) error {
+func Init(targets []config.Target, listenPort string, dumpPath string) error {
 	var err error
 
 	tmpl, err := template.ParseFS(assetsDir, "assets/*.tmpl")
@@ -123,8 +124,9 @@ func Init(targets []config.Target, listenPort string) error {
 	}
 
 	ui := &UI{
-		tmpl:    tmpl,
-		Targets: targets,
+		tmpl:         tmpl,
+		Targets:      targets,
+		DumpLocation: dumpPath,
 	}
 
 	mux := http.NewServeMux()
