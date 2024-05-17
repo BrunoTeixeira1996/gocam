@@ -145,7 +145,7 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 //go:embed assets/*
 var assetsDir embed.FS
 
-func Init(targets []config.Target, listenPort string, dumpPath string, logPath string) error {
+func Init(targets []config.Target, listenPort string, dumpRecording string, logRecording string) error {
 	var err error
 
 	tmpl, err := template.ParseFS(assetsDir, "assets/*.tmpl")
@@ -156,8 +156,8 @@ func Init(targets []config.Target, listenPort string, dumpPath string, logPath s
 	ui := &UI{
 		tmpl:         tmpl,
 		Targets:      targets,
-		DumpLocation: dumpPath, // FIXME: Maybe this should be in a different struct
-		LogLocation:  logPath,  // FIXME: Maybe this should be in a different struct
+		DumpLocation: dumpRecording, // FIXME: Maybe this should be in a different struct
+		LogLocation:  logRecording,  // FIXME: Maybe this should be in a different struct
 	}
 
 	mux := http.NewServeMux()
@@ -167,7 +167,7 @@ func Init(targets []config.Target, listenPort string, dumpPath string, logPath s
 	// Example endpoint to cancel recording for camera 1
 	mux.HandleFunc("/cancel/", ui.cancelHandler)
 
-	log.Printf("Listening at :%s\n", listenPort)
+	log.Printf("Listen at port %s - Dump recording at %s - Log recording at %s\n", listenPort, dumpRecording, logRecording)
 
 	err = http.ListenAndServe(":"+listenPort, mux)
 	if err != nil && err != http.ErrServerClosed {

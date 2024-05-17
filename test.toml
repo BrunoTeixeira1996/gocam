@@ -1,3 +1,9 @@
+[conf]
+listen_port = "9999"
+dump_recording = "/tmp/dump/"
+log_recording = "/tmp/log/"
+
+
 [[targets]]
 name = "Bedroom Tapo Camera"
 host = "192.168.30.44"

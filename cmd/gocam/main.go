@@ -11,13 +11,10 @@ import (
 
 func run() error {
 	var configFlag = flag.String("file", "", "use this to provide the config file full path")
-	var listenPortFlag = flag.String("listen", "", "use this to provide the listening port")
-	var dumpPathFlag = flag.String("dump", "", "use this to provide the path to dump the .mp4 file")
-	var logPathFlag = flag.String("log", "", "use this to provide the path to the log folder")
 	flag.Parse()
 
-	if *configFlag == "" || *listenPortFlag == "" || *dumpPathFlag == "" || *logPathFlag == "" {
-		return fmt.Errorf("[ERROR] Please provide valid flags")
+	if *configFlag == "" {
+		return fmt.Errorf("[ERROR] Please provide a valid config file")
 	}
 
 	cfg, err := config.ReadTomlFile(*configFlag)
@@ -25,7 +22,7 @@ func run() error {
 		return err
 	}
 
-	if err := handles.Init(cfg.Targets, *listenPortFlag, *dumpPathFlag, *logPathFlag); err != nil {
+	if err := handles.Init(cfg.Targets, cfg.Conf.ListenPort, cfg.Conf.DumpRecording, cfg.Conf.LogRecording); err != nil {
 		return err
 	}
 

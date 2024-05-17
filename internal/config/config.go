@@ -6,6 +6,12 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
+type Conf struct {
+	ListenPort    string `toml:"listen_port"`
+	DumpRecording string `toml:"dump_recording"`
+	LogRecording  string `toml:"log_recording"`
+}
+
 type Target struct {
 	Name          string `toml:"name"`
 	Host          string `toml:"host"`
@@ -18,6 +24,7 @@ type Target struct {
 }
 
 type Config struct {
+	Conf    Conf
 	Targets []Target
 }
 
