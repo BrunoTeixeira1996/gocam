@@ -24,7 +24,6 @@
 		<th width="10%">cmd</th>
 		<th width="10%">dump</th>
 		<th width="10%">log</th>
-		<th width="10%">status</th>
 	      </tr>
 	      {{ range $r := .recordings }}
 	      <tr>
@@ -32,7 +31,7 @@
 		  <p>{{ $r.Id }}</p>
 		</td>
 		<td>
-		<p>{{ $r.Start }} sss</p>
+		<p>{{ $r.Start }}</p>
 		</td>
 		<td>
 		  <p>{{ $r.WantDurationParsed }} ({{ $r.WantDurationS }} seconds) </p>
@@ -45,9 +44,6 @@
 		</td>
 		<td>
 		  <p>{{ $r.LogOutput }}</p>
-		</td>
-		<td>
-		  <p>{{ $r.Status }}</p>
 		</td>
 	      </tr>
 	      {{ end }}
