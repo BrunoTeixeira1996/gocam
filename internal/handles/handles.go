@@ -25,6 +25,18 @@ type UI struct {
 	LogOutput         string // path for the .log dump
 }
 
+// // Removes from ui.Recordings the current canceled/terminated recording
+func (ui *UI) RemoveCanceledRecording(Id string) {
+	var indexToRemove int
+	for i, v := range ui.Recordings {
+		if v.Id == Id {
+			indexToRemove = i
+		}
+	}
+	ui.Recordings[indexToRemove] = ui.Recordings[len(ui.Recordings)-1]
+	ui.Recordings = ui.Recordings[:len(ui.Recordings)-1]
+}
+
 // Receives GET and displays index page
 func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
 	if err := ui.tmpl.ExecuteTemplate(w, "index.html.tmpl", ""); err != nil {
@@ -144,7 +156,8 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	// TODO: remove from ui.Recordings the current canceled recording
+	// Removes canceled recordings from UI
+	ui.RemoveCanceledRecording(data.ID)
 }
 
 //go:embed assets/*
