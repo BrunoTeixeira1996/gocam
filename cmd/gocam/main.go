@@ -38,9 +38,6 @@ func main() {
 /*
 TODO:
    - add slog instead of log and write log to file
-   - create a way to list current recordings
-     - Instead of having RecordingChannels, DumpLocation and LogLocation in UI struct I can create another struct that is filled by StartFFMPEG function with data from the current recording
-     - This way, UI struct will have a slice of those structs will all the useful information that can be viewed from the web or queried from CLI
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output
    - check the FIXMEE
