@@ -11,15 +11,50 @@ import (
 	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
+// TODO: clean this comments
+type Recording struct {
+	Id                 string        // random string to identify the recording
+	Start              string        // start date
+	WantDuration       string        // recording duration from POST
+	WantDurationParsed time.Duration // recording duration parsed
+	WantDurationS      string        // recording duration in seconds for ffmpeg
+	Cmd                string        // cmd used for ffmpeg exec
+	Channel            chan struct{} // channel used in the respective recording in order to cancel the goroutine
+	DumpOutput         string        // .mp4 dump
+	LogOutput          string        // .log dump
+}
+
+// Initializes recording struct
+func (r *Recording) Init(dumpOutput, logOutput string) {
+	r.Id = utils.GenerateRandomString(10)
+	r.DumpOutput = dumpOutput
+	r.LogOutput = logOutput
+	r.Channel = make(chan struct{})
+}
+
+// Parses duration and converts to seconds since ffmpeg needs that value
+func (r *Recording) ParseDurationToSeconds() error {
+	var err error
+
+	r.WantDurationParsed, err = time.ParseDuration(r.WantDuration)
+	if err != nil {
+		return fmt.Errorf("While parsing duration: %s", err)
+	}
+
+	r.WantDurationS = fmt.Sprintf("%.f", r.WantDurationParsed.Seconds())
+
+	return nil
+}
+
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
-func StartFFMPEGRecording(rD time.Duration, recordingDuration string, cancel chan struct{}, dumpLocation string, logLocation string, recordID string) error {
+func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 	currentTime := time.Now()
-	formattedTime := currentTime.Format("2006-01-02-15-04-05")
-	outputFile := dumpLocation + "output" + formattedTime + "-" + recordID + ".mp4"
+	recording.Start = currentTime.Format("2006-01-02-15-04-05")
+	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
 
-	log.Printf("[INFO] Starting record duration %s for %s file with %s ID\n", recordingDuration, outputFile, recordID)
+	log.Printf("[INFO] Starting record duration %s for %s file with %s ID\n", recording.WantDurationS, recording.DumpOutput, recording.Id)
 
-	cmd := exec.Command("ffmpeg", "-i", "rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1", "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recordingDuration, outputFile)
+	cmd := exec.Command("ffmpeg", "-i", "rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1", "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recording.WantDurationS, recording.DumpOutput)
 
 	// Capture the output
 	var output bytes.Buffer
@@ -30,17 +65,20 @@ func StartFFMPEGRecording(rD time.Duration, recordingDuration string, cancel cha
 		return fmt.Errorf("[ERROR] FFMPEG while starting:%s\n", err)
 	}
 
+	// Add recording to slice of recordings
+	*recordings = append(*recordings, *recording)
+
 	select {
-	case <-time.After(rD):
-		log.Printf("[INFO] Recording for %s ID finished\n", recordID)
-	case <-cancel:
+	case <-time.After(recording.WantDurationParsed):
+		log.Printf("[INFO] Recording for %s ID finished\n", recording.Id)
+	case <-recording.Channel:
 		if err := cmd.Process.Signal(os.Interrupt); err != nil {
 			log.Printf("[ERROR] Error sending interrupt signal: %s\n", err)
 		}
 		// Wait for the process to exit
 		<-time.After(5 * time.Second)
 		if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
-			log.Printf("[ERROR] Process for %s ID did not exit gracefully, force killing...\n", recordID)
+			log.Printf("[ERROR] Process for %s ID did not exit gracefully, force killing...\n", recording.Id)
 
 			err := cmd.Process.Kill()
 			if err != nil {
@@ -48,15 +86,15 @@ func StartFFMPEGRecording(rD time.Duration, recordingDuration string, cancel cha
 			}
 			return err
 		}
-		log.Printf("[INFO] Recording for %s ID cancelled\n", recordID)
+		log.Printf("[INFO] Recording for %s ID cancelled\n", recording.Id)
 	}
 
-	// Saves a file (recordID.log) in the logs folder to not populate the log stdout
-	if err := utils.SaveFFMPEGOutput(logLocation, recordID, output.Bytes()); err != nil {
+	// Saves a file (recording.Id.log) in the logs folder to not populate the log stdout
+	if err := utils.SaveFFMPEGOutput(recording.LogOutput, recording.Id, output.Bytes()); err != nil {
 		return err
 	}
 
-	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recordID, logLocation)
+	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recording.Id, recording.LogOutput)
 
 	return nil
 }

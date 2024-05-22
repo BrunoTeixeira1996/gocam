@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Recordings</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+
+    <div class="container">
+      <div class="row">
+	<div class="col-md-12">
+
+	  <h1>Recordings</h1>
+
+	  <table class="table">
+	    <tbody><tr>
+		<th width="10%">Id</th>
+		<th width="10%">start</th>
+		<th width="10%">recording duration</th>
+		<th width="10%">cmd</th>
+		<th width="10%">dump</th>
+		<th width="10%">log</th>
+		<th width="10%">status</th>
+	      </tr>
+	      {{ range $r := .recordings }}
+	      <tr>
+		<td>
+		  <p>{{ $r.Id }}</p>
+		</td>
+		<td>
+		<p>{{ $r.Start }} sss</p>
+		</td>
+		<td>
+		  <p>{{ $r.WantDurationParsed }} ({{ $r.WantDurationS }} seconds) </p>
+		</td>
+		<td>
+		  <p>{{ $r.Cmd }}</p>
+		</td>
+		<td>
+		  <p>{{ $r.DumpOutput }}</p>
+		</td>
+		<td>
+		  <p>{{ $r.LogOutput }}</p>
+		</td>
+		<td>
+		  <p>{{ $r.Status }}</p>
+		</td>
+	      </tr>
+	      {{ end }}
+	  </table>
+	</div>
+
+  </body>
+</html>

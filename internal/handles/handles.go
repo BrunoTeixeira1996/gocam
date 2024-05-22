@@ -3,16 +3,13 @@ package handles
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"text/template"
-	"time"
 
 	"github.com/BrunoTeixeira1996/gocam/internal/action"
 	"github.com/BrunoTeixeira1996/gocam/internal/config"
-	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
 type Record struct {
@@ -20,12 +17,15 @@ type Record struct {
 }
 
 type UI struct {
-	tmpl         *template.Template
-	Targets      []config.Target
-	DumpLocation string
-	LogLocation  string
+	tmpl              *template.Template       // pointer to template
+	Targets           []config.Target          // list of all cameras
+	RecordingChannels map[string]chan struct{} // list of all ongoing records
+	Recordings        []action.Recording
+	DumpOutput        string // path for the .mp4 dump
+	LogOutput         string // path for the .log dump
 }
 
+// Receives GET and displays index page
 func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
 	if err := ui.tmpl.ExecuteTemplate(w, "index.html.tmpl", ""); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -33,6 +33,7 @@ func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Receives GET and displays current cameras from config file
 func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	if err := ui.tmpl.ExecuteTemplate(w, "targets.html.tmpl", map[string]interface{}{
 		"targets": ui.Targets,
@@ -42,9 +43,18 @@ func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Receives GET and displays ongoing recordings
+func (ui *UI) listRecordingsHandler(w http.ResponseWriter, r *http.Request) {
+	if err := ui.tmpl.ExecuteTemplate(w, "recordings.html.tmpl", map[string]interface{}{
+		"recordings": ui.Recordings,
+	}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 // Receives POST with info to start recording that POST
 // contains a duration object with the duration of the recording
-// if not present assume its 2h
 // after that we execute action.startFFMPEGRecording() function that records the current camera
 func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
@@ -64,35 +74,38 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Unmarshal JSON data
-	var record Record
-	if err := json.Unmarshal(responseBody, &record); err != nil {
-		e := "[INFO] No JSON object provided in POST, assuming 2h record time"
-		http.Error(w, e, http.StatusBadRequest)
-		log.Println(e)
-		record.Duration = "2h"
-	}
+	var recording action.Recording
+	recording.Init(ui.DumpOutput, ui.LogOutput)
 
-	recordingDuration, err := time.ParseDuration(record.Duration)
-	if err != nil {
-		e := "[ERROR] While parsing duration: " + err.Error()
+	var t struct{ Duration string }
+	if err := json.Unmarshal(responseBody, &t); err != nil {
+		e := "[ERROR] No JSON object provided in POST"
 		http.Error(w, e, http.StatusBadRequest)
 		log.Println(e)
 		return
 	}
 
-	recordID := utils.GenerateRandomString(10)
-	cameraChannel := make(chan struct{})
-	action.RecordingChannels[recordID] = cameraChannel
+	recording.WantDuration = t.Duration
 
-	// convert hour to seconds since ffmpeg uses seconds as time duration
-	recordingDurationS := fmt.Sprintf("%.f", recordingDuration.Seconds())
+	if err := recording.ParseDurationToSeconds(); err != nil {
+		e := "[ERROR] " + err.Error()
+		http.Error(w, e, http.StatusBadRequest)
+		log.Println(e)
+		return
+	}
+
+	action.RecordingChannels[recording.Id] = recording.Channel
+
+	ui.RecordingChannels = action.RecordingChannels
+
 	// if err = action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel); err != nil {
 	// 	http.Error(w, err.Error(), http.StatusBadRequest)
 	// 	log.Println(err)
 	// 	return
 	// }
 	// FIXMEE: I want to grab the error here
-	go action.StartFFMPEGRecording(recordingDuration, recordingDurationS, cameraChannel, ui.DumpLocation, ui.LogLocation, recordID)
+	go action.StartFFMPEGRecording(&recording, &ui.Recordings)
+
 }
 
 // Receives POST with an ID that contains the recording identifier
@@ -130,6 +143,8 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusAccepted)
 		log.Println(err)
 	}
+
+	// TODO: remove from ui.Recordings the current canceled recording
 }
 
 //go:embed assets/*
@@ -144,15 +159,16 @@ func Init(targets []config.Target, listenPort string, dumpRecording string, logR
 	}
 
 	ui := &UI{
-		tmpl:         tmpl,
-		Targets:      targets,
-		DumpLocation: dumpRecording, // FIXME: Maybe this should be in a different struct
-		LogLocation:  logRecording,  // FIXME: Maybe this should be in a different struct
+		tmpl:       tmpl,
+		DumpOutput: dumpRecording,
+		Targets:    targets,
+		LogOutput:  logRecording,
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", ui.indexHandler)
 	mux.HandleFunc("/listcameras/", ui.listHandler)
+	mux.HandleFunc("/listrecordings/", ui.listRecordingsHandler)
 	mux.HandleFunc("/record/", ui.recordHandler)
 	mux.HandleFunc("/cancel/", ui.cancelHandler)
 
