@@ -11,7 +11,7 @@ import (
 	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
-// TODO: clean this comments
+// Struct responsable for holding a respective recording
 type Recording struct {
 	Id                 string        // random string to identify the recording
 	Start              string        // start date
