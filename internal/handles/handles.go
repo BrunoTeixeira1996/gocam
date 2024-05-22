@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 	"text/template"
 
 	"github.com/BrunoTeixeira1996/gocam/internal/action"
@@ -110,14 +111,21 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 
 	ui.RecordingChannels = action.RecordingChannels
 
-	// if err = action.StartFFMPEGRecording(recordingDuration, recordingDurationS, camera1Channel); err != nil {
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	log.Println(err)
-	// 	return
-	// }
-	// FIXMEE: I want to grab the error here
-	go action.StartFFMPEGRecording(&recording, &ui.Recordings)
+	var wg sync.WaitGroup
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// TODO: use mutex to modify ui.Recordings
+		err = action.StartFFMPEGRecording(&recording, &ui.Recordings)
+	}()
+	wg.Wait()
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Println(err)
+		return
+	}
 }
 
 // Receives POST with an ID that contains the recording identifier
