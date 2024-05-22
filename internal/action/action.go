@@ -96,6 +96,8 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 
 	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recording.Id, recording.LogOutput)
 
+	// TODO: Remove finished recording from recordings slice using mutex
+
 	return nil
 }
 
