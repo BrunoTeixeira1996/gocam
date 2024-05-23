@@ -26,6 +26,10 @@ func run() error {
 		return err
 	}
 
+	if err := cfg.InitJSON(); err != nil {
+		return err
+	}
+
 	if err := handles.Init(cfg.Targets, cfg.Conf.ListenPort, cfg.Conf.DumpRecording, cfg.Conf.LogRecording); err != nil {
 		return err
 	}
@@ -41,7 +45,7 @@ func main() {
 
 /*
 TODO:
-   - add recordings (finished and canceled) to json in order to view that in http
+   - add recordings (finished and canceled) to json in order to view that in http (ONGOING)
    - add slog instead of log and write log to file
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output

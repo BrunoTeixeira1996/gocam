@@ -117,7 +117,6 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		// TODO: use mutex to modify ui.Recordings
 		err = action.StartFFMPEGRecording(&recording, &ui.Recordings)
 	}()
 	wg.Wait()

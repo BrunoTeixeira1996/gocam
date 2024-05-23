@@ -1,13 +1,16 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/BurntSushi/toml"
 )
 
 type Conf struct {
+	JsonFile      string `toml:"json_file"`
 	ListenPort    string `toml:"listen_port"`
 	DumpRecording string `toml:"dump_recording"`
 	LogRecording  string `toml:"log_recording"`
@@ -56,5 +59,40 @@ func (c *Config) ValidatePaths() error {
 		return fmt.Errorf("[ERROR] Log path does not exist")
 	}
 
+	return nil
+}
+
+// Verifies if json file exist
+// if not creates an empty json file
+func (c *Config) InitJSON() error {
+	_, err := os.Stat(c.Conf.JsonFile)
+
+	// file does not exist so lets create
+	if os.IsNotExist(err) {
+		log.Println("[INFO] Json file does not exist ... going to create")
+
+		file, err := os.Create(c.Conf.JsonFile)
+		if err != nil {
+			return fmt.Errorf("[ERROR] while creating the JSON file: %s\n", err)
+		}
+
+		defer file.Close()
+
+		_, err = file.Write([]byte("[{}]"))
+		if err != nil {
+			return fmt.Errorf("[ERROR] while writing the JSON file: %s\n", err)
+		}
+	} else {
+		// validate if its a valid json file
+		data, err := os.ReadFile(c.Conf.JsonFile)
+		if err != nil {
+			return fmt.Errorf("[ERROR] while reading the JSON file: %s\n", err)
+		}
+
+		var j interface{}
+		if err := json.Unmarshal(data, &j); err != nil {
+			return fmt.Errorf("[ERROR] not a valid JSON file: %s\n", err)
+		}
+	}
 	return nil
 }

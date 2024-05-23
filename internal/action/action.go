@@ -12,7 +12,10 @@ import (
 	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
-var mutex sync.Mutex
+var (
+	mutex             sync.Mutex                       // mutex to perform actions on memory objects
+	RecordingChannels = make(map[string]chan struct{}) // Map to store channels for each recording
+)
 
 // Struct responsable for holding a respective recording
 type Recording struct {
@@ -25,6 +28,7 @@ type Recording struct {
 	Channel            chan struct{} // channel used in the respective recording in order to cancel the goroutine
 	DumpOutput         string        // .mp4 dump
 	LogOutput          string        // .log dump
+	Status             string        // finished / canceled
 }
 
 // Initializes recording struct
@@ -125,9 +129,6 @@ func removeFinishedRecording(r *[]Recording, recordingToRemove string) {
 
 	*r = append(slice[:indexToRemove], slice[indexToRemove+1:]...)
 }
-
-// Map to store channels for each recording
-var RecordingChannels = make(map[string]chan struct{})
 
 func CancelRecording(recordID string) error {
 	log.Printf("[INFO] Cancellation signal sent for camera %s\n", recordID)

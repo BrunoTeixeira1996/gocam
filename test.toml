@@ -1,4 +1,5 @@
 [conf]
+json_file = "/tmp/file.json"
 listen_port = "9999"
 dump_recording = "/tmp/dump/"
 log_recording = "/tmp/log/"
