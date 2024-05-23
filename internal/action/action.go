@@ -126,10 +126,13 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config 
 	currentTime := time.Now()
 	recording.Start = currentTime.Format("2006-01-02-15-04-05")
 	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
+	recording.LogOutput = recording.LogOutput + recording.Id + ".log"
 
 	log.Printf("[INFO] Starting record duration %s for %s file with %s ID on cameraID %s\n", recording.WantDurationS, recording.DumpOutput, recording.Id, recording.CameraId)
 
 	cmd := exec.Command("ffmpeg", "-i", recording.Config.Protocol+"://"+recording.Config.User+":"+recording.Config.Password+"@"+recording.Config.Host+":"+recording.Config.Port+recording.Config.Stream, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recording.WantDurationS, recording.DumpOutput)
+
+	recording.Cmd = cmd.String()
 
 	// Capture the output
 	var output bytes.Buffer
