@@ -37,8 +37,8 @@ func main() {
 
 /*
 TODO:
-   - work on mutex in order to edit recordings slice when recording is finished
    - add recordings (finished and canceled) to json in order to view that in http
+   - make sure dump and log file exist
    - add slog instead of log and write log to file
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output

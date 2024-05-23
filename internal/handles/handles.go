@@ -26,12 +26,13 @@ type UI struct {
 	LogOutput         string // path for the .log dump
 }
 
-// // Removes from ui.Recordings the current canceled/terminated recording
+// Removes from ui.Recordings the current canceled/terminated recording
 func (ui *UI) RemoveCanceledRecording(Id string) {
 	var indexToRemove int
 	for i, v := range ui.Recordings {
 		if v.Id == Id {
 			indexToRemove = i
+			break
 		}
 	}
 	ui.Recordings[indexToRemove] = ui.Recordings[len(ui.Recordings)-1]

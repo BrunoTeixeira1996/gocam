@@ -6,10 +6,13 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 	"time"
 
 	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
+
+var mutex sync.Mutex
 
 // Struct responsable for holding a respective recording
 type Recording struct {
@@ -96,9 +99,31 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 
 	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recording.Id, recording.LogOutput)
 
-	// TODO: Remove finished recording from recordings slice using mutex
+	// Remove finished recording from recordings slice using mutex
+	mutex.Lock()
+	removeFinishedRecording(recordings, recording.Id)
+	mutex.Unlock()
 
 	return nil
+}
+
+// Removes finished recording from current recording slice
+func removeFinishedRecording(r *[]Recording, recordingToRemove string) {
+	var indexToRemove int
+
+	for i, v := range *r {
+		if v.Id == recordingToRemove {
+			indexToRemove = i
+			break
+		}
+	}
+
+	slice := *r
+	if indexToRemove < 0 || indexToRemove >= len(slice) {
+		return // Index out of bounds, do nothing
+	}
+
+	*r = append(slice[:indexToRemove], slice[indexToRemove+1:]...)
 }
 
 // Map to store channels for each recording
