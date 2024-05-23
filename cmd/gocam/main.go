@@ -30,7 +30,7 @@ func run() error {
 		return err
 	}
 
-	if err := handles.Init(cfg.Targets, cfg.Conf.ListenPort, cfg.Conf.DumpRecording, cfg.Conf.LogRecording); err != nil {
+	if err := handles.Init(cfg, cfg.Targets, cfg.Conf.ListenPort, cfg.Conf.DumpRecording, cfg.Conf.LogRecording); err != nil {
 		return err
 	}
 
@@ -45,8 +45,6 @@ func main() {
 
 /*
 TODO:
-   - add camera ID to toml
-     - validate if POST contains ID and if that ID exist
    - add recordings (finished and canceled) to json in order to view that in http (ONGOING)
    - add slog instead of log and write log to file
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...

@@ -19,6 +19,7 @@ var (
 
 // Struct responsable for holding a respective recording
 type Recording struct {
+	CameraId           string        // camera id from POST
 	Id                 string        // random string to identify the recording
 	Start              string        // start date
 	WantDuration       string        // recording duration from POST
@@ -32,7 +33,8 @@ type Recording struct {
 }
 
 // Initializes recording struct
-func (r *Recording) Init(dumpOutput, logOutput string) {
+func (r *Recording) Init(cameraId, dumpOutput, logOutput string) {
+	r.CameraId = cameraId
 	r.Id = utils.GenerateRandomString(10)
 	r.DumpOutput = dumpOutput
 	r.LogOutput = logOutput
@@ -54,12 +56,13 @@ func (r *Recording) ParseDurationToSeconds() error {
 }
 
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
+// TODO: remove hardcoded exec command and use values from cfg
 func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 	currentTime := time.Now()
 	recording.Start = currentTime.Format("2006-01-02-15-04-05")
 	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
 
-	log.Printf("[INFO] Starting record duration %s for %s file with %s ID\n", recording.WantDurationS, recording.DumpOutput, recording.Id)
+	log.Printf("[INFO] Starting record duration %s for %s file with %s ID on cameraID %s\n", recording.WantDurationS, recording.DumpOutput, recording.Id, recording.CameraId)
 
 	cmd := exec.Command("ffmpeg", "-i", "rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1", "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recording.WantDurationS, recording.DumpOutput)
 

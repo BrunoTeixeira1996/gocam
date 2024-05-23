@@ -3,6 +3,7 @@ package handles
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +19,7 @@ type Record struct {
 }
 
 type UI struct {
+	Config            config.Config            // config Object
 	tmpl              *template.Template       // pointer to template
 	Targets           []config.Target          // list of all cameras
 	RecordingChannels map[string]chan struct{} // list of all ongoing records
@@ -88,16 +90,27 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Unmarshal JSON data
-	var recording action.Recording
-	recording.Init(ui.DumpOutput, ui.LogOutput)
-
-	var t struct{ Duration string }
+	var t struct {
+		CameraId string
+		Duration string
+	}
 	if err := json.Unmarshal(responseBody, &t); err != nil {
 		e := "[ERROR] No JSON object provided in POST"
 		http.Error(w, e, http.StatusBadRequest)
 		log.Println(e)
 		return
 	}
+
+	// Validate if cameraID exist in the config toml file
+	if !ui.Config.IsCameraIdValid(t.CameraId) {
+		e := fmt.Sprintf("[ERROR] camera %s is not valid", t.CameraId)
+		http.Error(w, e, http.StatusBadRequest)
+		log.Println(e)
+		return
+	}
+
+	var recording action.Recording
+	recording.Init(t.CameraId, ui.DumpOutput, ui.LogOutput)
 
 	recording.WantDuration = t.Duration
 
@@ -171,7 +184,7 @@ func (ui *UI) cancelHandler(w http.ResponseWriter, r *http.Request) {
 //go:embed assets/*
 var assetsDir embed.FS
 
-func Init(targets []config.Target, listenPort string, dumpRecording string, logRecording string) error {
+func Init(config config.Config, targets []config.Target, listenPort string, dumpRecording string, logRecording string) error {
 	var err error
 
 	tmpl, err := template.ParseFS(assetsDir, "assets/*.tmpl")
@@ -180,6 +193,7 @@ func Init(targets []config.Target, listenPort string, dumpRecording string, logR
 	}
 
 	ui := &UI{
+		Config:     config,
 		tmpl:       tmpl,
 		DumpOutput: dumpRecording,
 		Targets:    targets,

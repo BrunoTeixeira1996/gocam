@@ -17,6 +17,7 @@ type Conf struct {
 }
 
 type Target struct {
+	CameraId      string `toml:"camera_id"`
 	Name          string `toml:"name"`
 	Host          string `toml:"host"`
 	Port          string `toml:"port"`
@@ -95,4 +96,14 @@ func (c *Config) InitJSON() error {
 		}
 	}
 	return nil
+}
+
+// Validates if given camera Id exists in toml file
+func (c *Config) IsCameraIdValid(cameraId string) bool {
+	for _, v := range c.Targets {
+		if v.CameraId == cameraId {
+			return true
+		}
+	}
+	return false
 }
