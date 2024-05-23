@@ -2,6 +2,7 @@ package action
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -31,18 +32,18 @@ type RecordingConfig struct {
 
 // Struct responsable for holding a respective recording
 type Recording struct {
-	CameraId           string          // camera id from POST
-	Id                 string          // random string to identify the recording
-	Start              string          // start date
-	WantDuration       string          // recording duration from POST
-	WantDurationParsed time.Duration   // recording duration parsed
-	WantDurationS      string          // recording duration in seconds for ffmpeg
-	Cmd                string          // cmd used for ffmpeg exec
-	Channel            chan struct{}   // channel used in the respective recording in order to cancel the goroutine
-	DumpOutput         string          // .mp4 dump
-	LogOutput          string          // .log dump
-	Status             string          // finished / canceled
-	Config             RecordingConfig // configs from recording
+	CameraId           string          `json:"CameraId"` // camera id from POST
+	Id                 string          `json:"Id"`       // random string to identify the recording
+	Start              string          `json:"Start"`    // start date
+	WantDuration       string          `json:"-"`        // recording duration from POST
+	WantDurationParsed time.Duration   `json:"-"`        // recording duration parsed
+	WantDurationS      string          `json:"Duration"` // recording duration in seconds for ffmpeg
+	Cmd                string          `json:"Cmd"`      // cmd used for ffmpeg exec
+	Channel            chan struct{}   `json:"-"`        // channel used in the respective recording in order to cancel the goroutine
+	DumpOutput         string          `json:"Dump"`     // .mp4 dump
+	LogOutput          string          `json:"Log"`      // .log dump
+	Status             string          `json:"Status"`   // finished / canceled
+	Config             RecordingConfig `json:"-"`        // configs from recording
 }
 
 // Initializes recording struct
@@ -86,9 +87,42 @@ func (r *Recording) ParseDurationToSeconds() error {
 	return nil
 }
 
+// Writes into the JSON file the newly recording
+func (r *Recording) UpdateJSON(status string, config config.Config) error {
+	var recordings []Recording
+
+	fC, err := os.ReadFile(config.Conf.JsonFile)
+	if err != nil {
+		return fmt.Errorf("[ERROR] while reading the json file:%s\n", err)
+	}
+
+	// file its not empty so we can unmarshal to read what it contains
+	if len(fC) > 0 {
+		if err := json.Unmarshal(fC, &recordings); err != nil {
+			return fmt.Errorf("[ERROR] while unmarshal the json file:%s\n", err)
+		}
+	}
+
+	r.Status = status
+
+	recordings = append(recordings, *r)
+
+	fC, err = json.MarshalIndent(recordings, "", "  ")
+	if err != nil {
+		return fmt.Errorf("[ERROR] while marshal the json file:%s\n", err)
+	}
+
+	// write JSON data to the file
+	if err := os.WriteFile(config.Conf.JsonFile, fC, 0644); err != nil {
+		return fmt.Errorf("[ERROR] while writing the json file:%s\n", err)
+	}
+
+	return nil
+}
+
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
 // Starts ffmpeg process
-func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
+func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config config.Config) error {
 	currentTime := time.Now()
 	recording.Start = currentTime.Format("2006-01-02-15-04-05")
 	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
@@ -112,7 +146,16 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 	select {
 	case <-time.After(recording.WantDurationParsed):
 		log.Printf("[INFO] Recording for %s ID finished\n", recording.Id)
+
+		if err := recording.UpdateJSON("Completed", config); err != nil {
+			log.Printf("[ERROR] %s\n", err)
+		}
+
 	case <-recording.Channel:
+		if err := recording.UpdateJSON("Canceled", config); err != nil {
+			log.Printf("[ERROR] %s\n", err)
+		}
+
 		if err := cmd.Process.Signal(os.Interrupt); err != nil {
 			log.Printf("[ERROR] Error sending interrupt signal: %s\n", err)
 		}

@@ -79,10 +79,6 @@ func (c *Config) InitJSON() error {
 
 		defer file.Close()
 
-		_, err = file.Write([]byte("[{}]"))
-		if err != nil {
-			return fmt.Errorf("[ERROR] while writing the JSON file: %s\n", err)
-		}
 	} else {
 		// validate if its a valid json file
 		data, err := os.ReadFile(c.Conf.JsonFile)
@@ -90,9 +86,16 @@ func (c *Config) InitJSON() error {
 			return fmt.Errorf("[ERROR] while reading the JSON file: %s\n", err)
 		}
 
+		// file is empty
+		if len(data) == 0 {
+			return nil
+		}
+
+		// file contains something
 		var j interface{}
 		if err := json.Unmarshal(data, &j); err != nil {
 			return fmt.Errorf("[ERROR] not a valid JSON file: %s\n", err)
+
 		}
 	}
 	return nil
