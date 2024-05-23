@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -28,6 +29,7 @@ type Config struct {
 	Targets []Target
 }
 
+// Reads tom file and parses info to a struct
 func ReadTomlFile(fileLocation string) (Config, error) {
 	var cfg Config
 
@@ -40,4 +42,19 @@ func ReadTomlFile(fileLocation string) (Config, error) {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+// Validates if dump path and log path exist
+func (c *Config) ValidatePaths() error {
+	_, err := os.Stat(c.Conf.DumpRecording)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("[ERROR] Dump path does not exist")
+	}
+
+	_, err = os.Stat(c.Conf.LogRecording)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("[ERROR] Log path does not exist")
+	}
+
+	return nil
 }
