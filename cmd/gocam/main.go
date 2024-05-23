@@ -45,6 +45,8 @@ func main() {
 
 /*
 TODO:
+   - add camera ID to toml
+     - validate if POST contains ID and if that ID exist
    - add recordings (finished and canceled) to json in order to view that in http (ONGOING)
    - add slog instead of log and write log to file
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
