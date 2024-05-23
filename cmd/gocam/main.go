@@ -48,5 +48,6 @@ TODO:
    - add slog instead of log and write log to file
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output
+   - Write a README
    - test if recording from different cameraId works(this can only be tested when I have 2 cameras)
 */
