@@ -110,7 +110,7 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var recording action.Recording
-	recording.Init(t.CameraId, ui.DumpOutput, ui.LogOutput)
+	recording.Init(t.CameraId, ui.DumpOutput, ui.LogOutput, ui.Config)
 
 	recording.WantDuration = t.Duration
 

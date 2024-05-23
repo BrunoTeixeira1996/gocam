@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BrunoTeixeira1996/gocam/internal/config"
 	"github.com/BrunoTeixeira1996/gocam/internal/utils"
 )
 
@@ -17,28 +18,58 @@ var (
 	RecordingChannels = make(map[string]chan struct{}) // Map to store channels for each recording
 )
 
+// Struct that hold some stuff from config file
+type RecordingConfig struct {
+	Name     string
+	Host     string
+	Port     string
+	Stream   string
+	Protocol string
+	User     string
+	Password string
+}
+
 // Struct responsable for holding a respective recording
 type Recording struct {
-	CameraId           string        // camera id from POST
-	Id                 string        // random string to identify the recording
-	Start              string        // start date
-	WantDuration       string        // recording duration from POST
-	WantDurationParsed time.Duration // recording duration parsed
-	WantDurationS      string        // recording duration in seconds for ffmpeg
-	Cmd                string        // cmd used for ffmpeg exec
-	Channel            chan struct{} // channel used in the respective recording in order to cancel the goroutine
-	DumpOutput         string        // .mp4 dump
-	LogOutput          string        // .log dump
-	Status             string        // finished / canceled
+	CameraId           string          // camera id from POST
+	Id                 string          // random string to identify the recording
+	Start              string          // start date
+	WantDuration       string          // recording duration from POST
+	WantDurationParsed time.Duration   // recording duration parsed
+	WantDurationS      string          // recording duration in seconds for ffmpeg
+	Cmd                string          // cmd used for ffmpeg exec
+	Channel            chan struct{}   // channel used in the respective recording in order to cancel the goroutine
+	DumpOutput         string          // .mp4 dump
+	LogOutput          string          // .log dump
+	Status             string          // finished / canceled
+	Config             RecordingConfig // configs from recording
 }
 
 // Initializes recording struct
-func (r *Recording) Init(cameraId, dumpOutput, logOutput string) {
+func (r *Recording) Init(cameraId, dumpOutput, logOutput string, config config.Config) {
 	r.CameraId = cameraId
 	r.Id = utils.GenerateRandomString(10)
 	r.DumpOutput = dumpOutput
 	r.LogOutput = logOutput
 	r.Channel = make(chan struct{})
+
+	// grab the correct target that is being used in the recording
+	var targetIndex int
+	for i, v := range config.Targets {
+		if v.CameraId == cameraId {
+			targetIndex = i
+			break
+		}
+	}
+
+	// copies target config to the respective recording
+	r.Config.Name = config.Targets[targetIndex].Name
+	r.Config.Host = config.Targets[targetIndex].Host
+	r.Config.Port = config.Targets[targetIndex].Port
+	r.Config.Stream = config.Targets[targetIndex].Stream
+	r.Config.Protocol = config.Targets[targetIndex].Protocol
+	r.Config.User = config.Targets[targetIndex].User
+	r.Config.Password = config.Targets[targetIndex].Password
 }
 
 // Parses duration and converts to seconds since ffmpeg needs that value
@@ -56,7 +87,7 @@ func (r *Recording) ParseDurationToSeconds() error {
 }
 
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
-// TODO: remove hardcoded exec command and use values from cfg
+// Starts ffmpeg process
 func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 	currentTime := time.Now()
 	recording.Start = currentTime.Format("2006-01-02-15-04-05")
@@ -64,7 +95,7 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording) error {
 
 	log.Printf("[INFO] Starting record duration %s for %s file with %s ID on cameraID %s\n", recording.WantDurationS, recording.DumpOutput, recording.Id, recording.CameraId)
 
-	cmd := exec.Command("ffmpeg", "-i", "rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1", "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recording.WantDurationS, recording.DumpOutput)
+	cmd := exec.Command("ffmpeg", "-i", recording.Config.Protocol+"://"+recording.Config.User+":"+recording.Config.Password+"@"+recording.Config.Host+":"+recording.Config.Port+recording.Config.Stream, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-t", recording.WantDurationS, recording.DumpOutput)
 
 	// Capture the output
 	var output bytes.Buffer

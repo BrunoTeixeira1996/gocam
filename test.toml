@@ -7,7 +7,7 @@ log_recording = "/tmp/log/"
 
 [[targets]]
 camera_id = "1"
-name = "Bedroom Tapo Camera"
+name = "Bedroom Tapo Camera 1"
 host = "192.168.30.44"
 port = "554"
 stream = "/stream1"
@@ -18,8 +18,8 @@ recording_path = "/mnt/external/camera/bedroom-tapo/"
 
 [[targets]]
 camera_id = "2"
-name = "Bedroom Tapo Camera"
-host = "192.168.30.44"
+name = "Bedroom Tapo Camera 2"
+host = "192.168.30.45"
 port = "554"
 stream = "/stream1"
 protocol = "rtsp"

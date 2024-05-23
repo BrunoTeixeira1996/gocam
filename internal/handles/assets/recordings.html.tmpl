@@ -18,6 +18,7 @@
 
 	  <table class="table">
 	    <tbody><tr>
+		<th width="20%">Name</th>
 		<th width="10%">Id</th>
 		<th width="10%">start</th>
 		<th width="10%">recording duration</th>
@@ -25,7 +26,10 @@
 	      {{ range $r := .recordings }}
 	      <tr>
 		<td>
-		  <p>{{ $r.Id }}</p>
+		  <p><b>{{ $r.Config.Name }}</b>(<i>{{ $r.Config.Host }}:{{ $r.Config.Port}}</i>) at <b>{{ $r.Config.Stream }}</b></p>
+		</td>
+		<td>
+		<p>{{ $r.Id }}</p>
 		</td>
 		<td>
 		<p>{{ $r.Start }}</p>
