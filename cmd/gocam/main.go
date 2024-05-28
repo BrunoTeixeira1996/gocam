@@ -45,7 +45,6 @@ func main() {
 
 /*
 TODO:
-   - add item in /listrecordings table that shows how much time left until recording is done
    - add slog instead of log
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output

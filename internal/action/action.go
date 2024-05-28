@@ -38,6 +38,7 @@ type Recording struct {
 	WantDuration       string          `json:"-"`        // recording duration from POST
 	WantDurationParsed time.Duration   `json:"-"`        // recording duration parsed
 	WantDurationS      string          `json:"Duration"` // recording duration in seconds for ffmpeg
+	UntilDuration      string          `json:"-"`        // value of start date + duration like May 30, 2024 15:37:25
 	Cmd                string          `json:"Cmd"`      // cmd used for ffmpeg exec
 	Channel            chan struct{}   `json:"-"`        // channel used in the respective recording in order to cancel the goroutine
 	DumpOutput         string          `json:"Dump"`     // .mp4 dump
@@ -120,6 +121,22 @@ func (r *Recording) UpdateJSON(status string, config config.Config) error {
 	return nil
 }
 
+// Calculates end time since start
+func (r *Recording) CaculateUntilDuration(currentTime time.Time) error {
+	parsedDuration, err := time.ParseDuration(r.WantDuration)
+	if err != nil {
+		return fmt.Errorf("[ERROR] parsing duration: %s\n", err)
+	}
+
+	// Add the duration to the start time
+	endTime := currentTime.Add(parsedDuration)
+
+	// Format the end time
+	r.UntilDuration = endTime.Format("January 02, 2006 15:04:05")
+
+	return nil
+}
+
 // Validates if rtsp connection is valid
 func isRTSPValid(recording *Recording) bool {
 	cmd := exec.Command("ffprobe", "rtsp://"+recording.Config.User+":"+recording.Config.Password+"@"+recording.Config.Host+":"+recording.Config.Port+recording.Config.Stream)
@@ -140,7 +157,10 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config 
 	}
 
 	currentTime := time.Now()
-	recording.Start = currentTime.Format("2006-01-02-15-04-05")
+	recording.Start = currentTime.Format("2006-01-02_15:04:05")
+	recording.CaculateUntilDuration(currentTime)
+	log.Println(recording.UntilDuration)
+
 	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
 	recording.LogOutput = recording.LogOutput + recording.Id + ".log"
 
