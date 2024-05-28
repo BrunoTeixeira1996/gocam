@@ -41,14 +41,6 @@ func (ui *UI) RemoveCanceledRecording(Id string) {
 	ui.Recordings = ui.Recordings[:len(ui.Recordings)-1]
 }
 
-// Receives GET and displays index page
-func (ui *UI) indexHandler(w http.ResponseWriter, r *http.Request) {
-	if err := ui.tmpl.ExecuteTemplate(w, "index.html.tmpl", ""); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 // Receives GET and displays current cameras from config file
 func (ui *UI) listHandler(w http.ResponseWriter, r *http.Request) {
 	if err := ui.tmpl.ExecuteTemplate(w, "targets.html.tmpl", map[string]interface{}{
@@ -201,7 +193,9 @@ func Init(config config.Config, targets []config.Target, listenPort string, dump
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", ui.indexHandler)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/listcameras", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("/listcameras/", ui.listHandler)
 	mux.HandleFunc("/listrecordings/", ui.listRecordingsHandler)
 	mux.HandleFunc("/record/", ui.recordHandler)

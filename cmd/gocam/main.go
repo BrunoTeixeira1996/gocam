@@ -45,7 +45,6 @@ func main() {
 
 /*
 TODO:
-   - redirect to /listcameras when going to /
    - add button in /listcameras to go to /listrecordings
    - add item in /listrecordings table that shows how much time left until recording is done
    - add slog instead of log
