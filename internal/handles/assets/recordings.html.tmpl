@@ -29,10 +29,10 @@
 		  <p><b>{{ $r.Config.Name }}</b>(<i>{{ $r.Config.Host }}:{{ $r.Config.Port}}</i>) at <b>{{ $r.Config.Stream }}</b></p>
 		</td>
 		<td>
-		<p>{{ $r.Id }}</p>
+		  <p>{{ $r.Id }}</p>
 		</td>
 		<td>
-		<p>{{ $r.Start }}</p>
+		  <p>{{ $r.Start }}</p>
 		</td>
 		<td>
 		  <p>{{ $r.WantDurationParsed }} ({{ $r.WantDurationS }} seconds) </p>
@@ -40,7 +40,10 @@
 	      </tr>
 	      {{ end }}
 	  </table>
-	</div>
+	  <div class="form-group">
+	    <button class="btn btn-outline-info" onclick="location.href='/listcameras'">List Cameras</button>
+	  </div>
 
+	</div>
   </body>
 </html>
