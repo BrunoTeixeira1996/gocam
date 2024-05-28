@@ -1,8 +1,56 @@
 # GoCam
 
-- Tem endpoint em `/record` que inicializa o ffmpeg para gravar a camera para um ficheiro .mp4 (o nome do ficheiro é a data e hora do inicio da gravaçao)
-  - com o comando start começa a gravar
-  - com o comando stop para de gravar
-	- ao parar de gravar copia o ficheiro mp4 para o `/mnt/pve/external/camera_output/`
-  - caso não haja o comando stop, a gravação terminada passado 1 hora
-  - a ideia é colocar também um timer, ou seja, fazer o comando start e dizer `start 2h` e ele fica 2h a gravar
+Program to record cameras via RSTP with ffmpeg
+
+## Endpoints
+
+- `/`
+  - Index page
+- `/listcameras`
+  - List all available cameras from config file
+- `/listrecordings`
+  - List current recordings
+- `/record`
+  - Start recording a specific camera for a specific time
+- `/cancel`
+  - Cancel a current recording
+  
+## Usage
+
+- Define a toml config file
+
+``` toml
+[conf]
+json_file = "/tmp/file.json"
+listen_port = "9999"
+dump_recording = "/tmp/dump/"
+log_recording = "/tmp/log/"
+
+[[targets]]
+camera_id = "1"
+name = "Bedroom Tapo Camera 1"
+host = "192.168.30.44"
+port = "554"
+stream = "/stream1"
+protocol = "rtsp"
+user = "brun0teixeira"
+password = "qwerty654321"
+recording_path = "/mnt/external/camera/bedroom-tapo/"
+
+[[targets]]
+camera_id = "2"
+name = "Bedroom Tapo Camera 2"
+host = "192.168.30.45"
+port = "554"
+stream = "/stream1"
+protocol = "rtsp"
+user = "brun0teixeira"
+password = "1qazZAQ!"
+recording_path = "/mnt/external/camera/bedroom-tapo/"
+```
+
+- Run the program
+
+``` console
+$ gocam -f config.toml
+```
