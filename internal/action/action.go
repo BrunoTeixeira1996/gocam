@@ -32,19 +32,20 @@ type RecordingConfig struct {
 
 // Struct responsable for holding a respective recording
 type Recording struct {
-	CameraId           string          `json:"CameraId"` // camera id from POST
-	Id                 string          `json:"Id"`       // random string to identify the recording
-	Start              string          `json:"Start"`    // start date
-	WantDuration       string          `json:"-"`        // recording duration from POST
-	WantDurationParsed time.Duration   `json:"-"`        // recording duration parsed
-	WantDurationS      string          `json:"Duration"` // recording duration in seconds for ffmpeg
-	UntilDuration      string          `json:"-"`        // value of start date + duration like May 30, 2024 15:37:25
-	Cmd                string          `json:"Cmd"`      // cmd used for ffmpeg exec
-	Channel            chan struct{}   `json:"-"`        // channel used in the respective recording in order to cancel the goroutine
-	DumpOutput         string          `json:"Dump"`     // .mp4 dump
-	LogOutput          string          `json:"Log"`      // .log dump
-	Status             string          `json:"Status"`   // finished / canceled
-	Config             RecordingConfig `json:"-"`        // configs from recording
+	CameraId           string          `json:"CameraId"`  // camera id from POST
+	Id                 string          `json:"Id"`        // random string to identify the recording
+	Start              string          `json:"-"`         // start date
+	StartDate          string          `json:"StartDate"` // start date with proper output
+	WantDuration       string          `json:"-"`         // recording duration from POST
+	WantDurationParsed time.Duration   `json:"-"`         // recording duration parsed
+	WantDurationS      string          `json:"Duration"`  // recording duration in seconds for ffmpeg
+	UntilDate          string          `json:"UntilDate"` // value of start date + duration with proper output
+	Cmd                string          `json:"Cmd"`       // cmd used for ffmpeg exec
+	Channel            chan struct{}   `json:"-"`         // channel used in the respective recording in order to cancel the goroutine
+	DumpOutput         string          `json:"Dump"`      // .mp4 dump
+	LogOutput          string          `json:"Log"`       // .log dump
+	Status             string          `json:"Status"`    // finished / canceled
+	Config             RecordingConfig `json:"-"`         // configs from recording
 }
 
 // Initializes recording struct
@@ -122,7 +123,7 @@ func (r *Recording) UpdateJSON(status string, config config.Config) error {
 }
 
 // Calculates end time since start
-func (r *Recording) CaculateUntilDuration(currentTime time.Time) error {
+func (r *Recording) CaculateUntilDate(currentTime time.Time) error {
 	parsedDuration, err := time.ParseDuration(r.WantDuration)
 	if err != nil {
 		return fmt.Errorf("[ERROR] parsing duration: %s\n", err)
@@ -132,7 +133,7 @@ func (r *Recording) CaculateUntilDuration(currentTime time.Time) error {
 	endTime := currentTime.Add(parsedDuration)
 
 	// Format the end time
-	r.UntilDuration = endTime.Format("January 02, 2006 15:04:05")
+	r.UntilDate = endTime.Format("January 02, 2006 15:04:05")
 
 	return nil
 }
@@ -147,9 +148,20 @@ Defines:
 */
 func (r *Recording) Setup() {
 	currentTime := time.Now()
-	r.Start = currentTime.Format("2006-01-02_15:04:05")
-	r.CaculateUntilDuration(currentTime)
 
+	layoutFormat := "2006-01-02_15:04:05"
+
+	// define start time
+	r.Start = currentTime.Format(layoutFormat)
+
+	// format the time into the desired output into r.StartDate to show in template
+	t, _ := time.Parse(layoutFormat, r.Start)
+	r.StartDate = t.Format("January 02, 2006 15:04:05")
+
+	// calculate end date
+	r.CaculateUntilDate(currentTime)
+
+	// define output locations
 	r.DumpOutput = r.DumpOutput + r.Start + "-" + r.Id + ".mp4"
 	r.LogOutput = r.LogOutput + r.Id + ".log"
 }
