@@ -137,6 +137,23 @@ func (r *Recording) CaculateUntilDuration(currentTime time.Time) error {
 	return nil
 }
 
+/*
+Setups boilerplate stuff for recording
+Defines:
+  - Start time
+  - Until time
+  - Dump output
+  - Log output
+*/
+func (r *Recording) Setup() {
+	currentTime := time.Now()
+	r.Start = currentTime.Format("2006-01-02_15:04:05")
+	r.CaculateUntilDuration(currentTime)
+
+	r.DumpOutput = r.DumpOutput + r.Start + "-" + r.Id + ".mp4"
+	r.LogOutput = r.LogOutput + r.Id + ".log"
+}
+
 // Validates if rtsp connection is valid
 func isRTSPValid(recording *Recording) bool {
 	cmd := exec.Command("ffprobe", "rtsp://"+recording.Config.User+":"+recording.Config.Password+"@"+recording.Config.Host+":"+recording.Config.Port+recording.Config.Stream)
@@ -151,18 +168,13 @@ func isRTSPValid(recording *Recording) bool {
 // Starts ffmpeg process
 func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config config.Config) error {
 
+	// Setup boilerplate stuff for recording
+	recording.Setup()
+
 	// First, check if rtsp connection is valid
 	if !isRTSPValid(recording) {
 		return fmt.Errorf("[ERROR] FFMPEG RTSP connection is not valid")
 	}
-
-	currentTime := time.Now()
-	recording.Start = currentTime.Format("2006-01-02_15:04:05")
-	recording.CaculateUntilDuration(currentTime)
-	log.Println(recording.UntilDuration)
-
-	recording.DumpOutput = recording.DumpOutput + recording.Start + "-" + recording.Id + ".mp4"
-	recording.LogOutput = recording.LogOutput + recording.Id + ".log"
 
 	log.Printf("[INFO] Starting record duration %s for %s file with %s ID on cameraID %s\n", recording.WantDurationS, recording.DumpOutput, recording.Id, recording.CameraId)
 
