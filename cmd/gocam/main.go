@@ -45,6 +45,7 @@ func main() {
 
 /*
 TODO:
+   - Fix started at 2024-05-28_17:26:54 to be the same as stops at  May 28, 2024 17:28:54
    - add slog instead of log
    - [ERROR] Process for j4wxmTPAY4 ID did not exit gracefully, force killing...
      - When killing a process I think its good to still have the ffmpeg output
