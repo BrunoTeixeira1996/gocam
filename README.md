@@ -1,6 +1,6 @@
 # GoCam
 
-Program to record cameras via RSTP with ffmpeg
+Program to record cameras via RTSP with ffmpeg
 
 ## Endpoints
 
