@@ -41,7 +41,7 @@ type Recording struct {
 	WantDurationS      string          `json:"Duration"`  // recording duration in seconds for ffmpeg
 	UntilDate          string          `json:"UntilDate"` // value of start date + duration with proper output
 	Cmd                string          `json:"Cmd"`       // cmd used for ffmpeg exec
-	Channel            chan struct{}   `json:"-"`         // channel used in the respective recording in order to cancel the goroutine
+	CancelChannel      chan struct{}   `json:"-"`         // channel used in the respective recording in order to cancel the goroutine
 	DumpOutput         string          `json:"Dump"`      // .mp4 dump
 	LogOutput          string          `json:"Log"`       // .log dump
 	Status             string          `json:"Status"`    // finished / canceled
@@ -54,7 +54,7 @@ func (r *Recording) Init(cameraId, dumpOutput, logOutput string, config config.C
 	r.Id = utils.GenerateRandomString(10)
 	r.DumpOutput = dumpOutput
 	r.LogOutput = logOutput
-	r.Channel = make(chan struct{})
+	r.CancelChannel = make(chan struct{})
 
 	// grab the correct target that is being used in the recording
 	var targetIndex int
@@ -214,7 +214,7 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config 
 			log.Printf("[ERROR] %s\n", err)
 		}
 
-	case <-recording.Channel:
+	case <-recording.CancelChannel:
 		if err := recording.UpdateJSON("Canceled", config); err != nil {
 			log.Printf("[ERROR] %s\n", err)
 		}
@@ -222,17 +222,28 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config 
 		if err := cmd.Process.Signal(os.Interrupt); err != nil {
 			log.Printf("[ERROR] Error sending interrupt signal: %s\n", err)
 		}
-		// Wait for the process to exit
-		<-time.After(5 * time.Second)
-		if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
-			log.Printf("[ERROR] Process for %s ID did not exit gracefully, force killing...\n", recording.Id)
 
-			err := cmd.Process.Kill()
-			if err != nil {
-				log.Printf("[ERROR] Error killing process: %s\n", err)
-			}
-			return err
+		// chan used to wait for child process to exit
+		done := make(chan error, 1)
+		go func() {
+			done <- cmd.Wait()
+		}()
+
+		if err := <-done; err != nil {
+			log.Printf("[ERROR] Process for %s ID finished with error: %s\n", recording.Id, err)
 		}
+
+		// // in case the process did not exited force killing
+		// <-time.After(5 * time.Second)
+		// if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
+		// 	log.Printf("[ERROR] Process for %s ID did not exit gracefully, force killing...\n", recording.Id)
+
+		// 	err := cmd.Process.Kill()
+		// 	if err != nil {
+		// 		log.Printf("[ERROR] Error killing process: %s\n", err)
+		// 	}
+		// 	return err
+		// }
 		log.Printf("[INFO] Recording for %s ID cancelled\n", recording.Id)
 	}
 

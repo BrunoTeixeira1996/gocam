@@ -113,7 +113,7 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	action.RecordingChannels[recording.Id] = recording.Channel
+	action.RecordingChannels[recording.Id] = recording.CancelChannel
 
 	ui.RecordingChannels = action.RecordingChannels
 
