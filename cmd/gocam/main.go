@@ -45,6 +45,7 @@ func main() {
 
 /*
 TODO:
+   - add flag for gokrazy
    - add slog instead of log
    - test if recording from different cameraId works(this can only be tested when I have 2 cameras)
 */
