@@ -122,7 +122,7 @@ func (ui *UI) recordHandler(w http.ResponseWriter, r *http.Request) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = action.StartFFMPEGRecording(&recording, &ui.Recordings, ui.Config)
+		err = action.StartFFMPEGRecording(&recording, &ui.Recordings, ui.Config, w)
 	}()
 	wg.Wait()
 

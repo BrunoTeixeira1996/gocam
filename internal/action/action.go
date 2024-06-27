@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"sync"
@@ -178,7 +179,7 @@ func isRTSPValid(recording *Recording) bool {
 
 // ffmpeg -i rtsp://brun0teixeira:qwerty654321@192.168.30.44:554/stream1 -c:v copy -c:a aac -strict experimental output.mp4
 // Starts ffmpeg process
-func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config config.Config) error {
+func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config config.Config, w http.ResponseWriter) error {
 
 	// Setup boilerplate stuff for recording
 	recording.Setup()
@@ -206,58 +207,48 @@ func StartFFMPEGRecording(recording *Recording, recordings *[]Recording, config 
 	// Add recording to slice of recordings
 	*recordings = append(*recordings, *recording)
 
-	select {
-	case <-time.After(recording.WantDurationParsed):
-		log.Printf("[INFO] Recording for %s ID finished\n", recording.Id)
+	// Send immediate HTTP response to avoid curl waiting
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(fmt.Sprintf("Recording started for ID: %s", recording.Id)))
 
-		if err := recording.UpdateJSON("Completed", config); err != nil {
-			log.Printf("[ERROR] %s\n", err)
-		}
-
-	case <-recording.CancelChannel:
-		if err := recording.UpdateJSON("Canceled", config); err != nil {
-			log.Printf("[ERROR] %s\n", err)
-		}
-
-		if err := cmd.Process.Signal(os.Interrupt); err != nil {
-			log.Printf("[ERROR] Error sending interrupt signal: %s\n", err)
-		}
-
-		// chan used to wait for child process to exit
-		done := make(chan error, 1)
-		go func() {
-			done <- cmd.Wait()
+	go func() {
+		defer func() {
+			// Remove finished recording from recordings slice using mutex
+			mutex.Lock()
+			removeFinishedRecording(recordings, recording.Id)
+			mutex.Unlock()
 		}()
 
-		if err := <-done; err != nil {
-			log.Printf("[ERROR] Process for %s ID finished with error: %s\n", recording.Id, err)
+		select {
+		case <-time.After(recording.WantDurationParsed):
+			log.Printf("[INFO] Recording for %s ID finished\n", recording.Id)
+			if err := recording.UpdateJSON("Completed", config); err != nil {
+				log.Printf("[ERROR] %s\n", err)
+			}
+		case <-recording.CancelChannel:
+			if err := recording.UpdateJSON("Canceled", config); err != nil {
+				log.Printf("[ERROR] %s\n", err)
+			}
+			if err := cmd.Process.Signal(os.Interrupt); err != nil {
+				log.Printf("[ERROR] Error sending interrupt signal: %s\n", err)
+			}
+			// Wait for the process to exit
+			done := make(chan error, 1)
+			go func() {
+				done <- cmd.Wait()
+			}()
+			if err := <-done; err != nil {
+				log.Printf("[ERROR] Process for %s ID finished with error: %s\n", recording.Id, err)
+			}
+			log.Printf("[INFO] Recording for %s ID cancelled\n", recording.Id)
 		}
 
-		// // in case the process did not exited force killing
-		// <-time.After(5 * time.Second)
-		// if cmd.ProcessState == nil || !cmd.ProcessState.Exited() {
-		// 	log.Printf("[ERROR] Process for %s ID did not exit gracefully, force killing...\n", recording.Id)
-
-		// 	err := cmd.Process.Kill()
-		// 	if err != nil {
-		// 		log.Printf("[ERROR] Error killing process: %s\n", err)
-		// 	}
-		// 	return err
-		// }
-		log.Printf("[INFO] Recording for %s ID cancelled\n", recording.Id)
-	}
-
-	// Saves a file (recording.Id.log) in the logs folder to not populate the log stdout
-	if err := utils.SaveFFMPEGOutput(recording.LogOutput, recording.Id, output.Bytes()); err != nil {
-		return err
-	}
-
-	log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recording.Id, recording.LogOutput)
-
-	// Remove finished recording from recordings slice using mutex
-	mutex.Lock()
-	removeFinishedRecording(recordings, recording.Id)
-	mutex.Unlock()
+		// Save the output log
+		if err := utils.SaveFFMPEGOutput(recording.LogOutput, recording.Id, output.Bytes()); err != nil {
+			log.Printf("[ERROR] %s\n", err)
+		}
+		log.Printf("[INFO] Finished recording for %s ID log file at %s\n", recording.Id, recording.LogOutput)
+	}()
 
 	return nil
 }
